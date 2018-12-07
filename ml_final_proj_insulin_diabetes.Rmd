@@ -1,0 +1,68 @@
+---
+title: "ml_final_proj_insulin_diabetes"
+author: "Yue Wu"
+date: "December 6, 2018"
+output: html_document
+---
+
+```{r,cache=TRUE,message=FALSE,warnings=FALSE}
+### Load helper packages ###
+loadlibs = function(libs) {
+  for(lib in libs) {
+    class(lib)
+    if(!do.call(require,as.list(lib))) {install.packages(lib)}
+    do.call(require,as.list(lib))
+  }
+}
+libs = c("tidyr","magrittr","purrr","dplyr","stringr","readr","data.table",
+         "keras","ggplot2","imager","pROC","VIM","mice")
+loadlibs(libs)
+options(warn = -1)
+```
+
+
+```{r}
+#read files
+setwd("C:/Users/wuyue/Desktop/CMU/ML-Pipeline/Final")
+fileDirectory = "C:/Users/wuyue/Desktop/CMU/ML-Pipeline/Final/dataset_diabetes"
+
+diabetic_data = read.csv(paste0(fileDirectory,"/diabetic_data.csv",sep=""),na.strings = "?") 
+IDs_mapping_data=read.csv(paste0(fileDirectory,"/IDs_mapping.csv",sep="")) 
+```
+
+```{r}
+#missing pattern
+
+#md.pattern(diabetic_data)
+aggr(diabetic_data, col = c('grey28','darkorange2'), numbers=TRUE, sortVars=TRUE, 
+                  labels=names(diabetic_data), cex.axis=.7, gap=3, 
+                  ylab=c("Histogram of missing data", "Pattern"))
+#exclude variables with too much missing data(>=40%) and irrelavent variables
+diabetic_data=diabetic_data%>%select(-weight,-medical_specialty,-payer_code,-encounter_id,-patient_nbr,-admission_source_id)
+
+#split into test/train data by 3:7
+diabetic_data=diabetic_data[sample(1:nrow(diabetic_data)),]
+traindata = diabetic_data[1:floor(nrow(diabetic_data)*0.7),]
+testdata = diabetic_data[-(1:floor(nrow(diabetic_data)*0.7)),]
+
+traindata=traindata[1:1000,]
+#remove entry with missing diagnosis
+traindata=traindata[-which(is.na(traindata$diag_1)),]
+#impute missing data in train set
+traindata.imputed = mice(traindata %>% 
+              select(-readmitted) %>% 
+              mutate_if(is.character, as.factor), m=1, maxit=1, method="cart") 
+#just use the first imputed set for convenience
+train.imputed = complete(traindata.imputed) %>% as_tibble()
+traindata.imputed = data.frame(result = traindata.imputed$readmitted%>%as.factor())%>%
+                    bind_cols(train.imputed) %>% as_tibble()
+
+#impute missing data in test set
+testdata.imputed = mice(testdata %>% 
+              select(-readmitted) %>% 
+              mutate_if(is.character, as.factor), m=5, maxit = 20) 
+#just use the first imputed set for convenience
+test.imputed = complete(testdata.imputed) %>% as_tibble()
+testdata.imputed = data.frame(result = testdata.imputed$readmitted%>%as.factor())%>%
+                    bind_cols(test.imputed) %>% as_tibble()
+```
