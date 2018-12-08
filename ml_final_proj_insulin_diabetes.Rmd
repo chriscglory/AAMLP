@@ -26,43 +26,65 @@ options(warn = -1)
 setwd("C:/Users/wuyue/Desktop/CMU/ML-Pipeline/Final")
 fileDirectory = "C:/Users/wuyue/Desktop/CMU/ML-Pipeline/Final/dataset_diabetes"
 
-diabetic_data = read.csv(paste0(fileDirectory,"/diabetic_data.csv",sep=""),na.strings = "?") 
+diabetic_data = read.csv(paste0(fileDirectory,"/diabetic_data.csv",sep=""),na.strings = c("?","Unknown/Invalid"))
 IDs_mapping_data=read.csv(paste0(fileDirectory,"/IDs_mapping.csv",sep="")) 
 ```
 
-```{r}
+```{r,cache=TRUE}
 #missing pattern
-
-#md.pattern(diabetic_data)
 aggr(diabetic_data, col = c('grey28','darkorange2'), numbers=TRUE, sortVars=TRUE, 
-                  labels=names(diabetic_data), cex.axis=.7, gap=3, 
+                  labels=names(diabetic_data), cex.axis=0.7, gap=3, 
                   ylab=c("Histogram of missing data", "Pattern"))
 #exclude variables with too much missing data(>=40%) and irrelavent variables
 diabetic_data=diabetic_data%>%select(-weight,-medical_specialty,-payer_code,-encounter_id,-patient_nbr,-admission_source_id)
+#remove entry with missing diagnosis and gender
+diabetic_data=diabetic_data[-which(is.na(diabetic_data$diag_1)),]
+diabetic_data=diabetic_data[-which(is.na(diabetic_data$diag_2)),]
+diabetic_data=diabetic_data[-which(is.na(diabetic_data$diag_3)),]
+diabetic_data=diabetic_data[-which(is.na(diabetic_data$gender)),]
+
+#transform outcomes flag
+diabetic_data$readmitted=ifelse(diabetic_data$readmitted=="<30",TRUE,FALSE)
+
+#summary statistics
+summary(diabetic_data)
+
+#remove imbalance variables(only have almost one value)
+diabetic_data=diabetic_data %>% select(-examide, -citoglipton,-acetohexamide,-troglitazone,-tolazamide,-glimepiride.pioglitazone, -metformin.rosiglitazone,-metformin.pioglitazone)
+
+#summary statistics of final data
+summary(diabetic_data)
 
 #split into test/train data by 3:7
 diabetic_data=diabetic_data[sample(1:nrow(diabetic_data)),]
 traindata = diabetic_data[1:floor(nrow(diabetic_data)*0.7),]
 testdata = diabetic_data[-(1:floor(nrow(diabetic_data)*0.7)),]
 
-traindata=traindata[1:1000,]
-#remove entry with missing diagnosis
-traindata=traindata[-which(is.na(traindata$diag_1)),]
 #impute missing data in train set
 traindata.imputed = mice(traindata %>% 
               select(-readmitted) %>% 
-              mutate_if(is.character, as.factor), m=1, maxit=1, method="cart") 
-#just use the first imputed set for convenience
+              mutate_if(is.character, as.factor), m=1, maxit=1,  nnet.MaxNWts = 10000) 
+#just use the first imputed set as the dataset is too large
 train.imputed = complete(traindata.imputed) %>% as_tibble()
-traindata.imputed = data.frame(result = traindata.imputed$readmitted%>%as.factor())%>%
+traindata.imputed = data.frame(result = traindata$readmitted%>%as.factor())%>%
                     bind_cols(train.imputed) %>% as_tibble()
 
 #impute missing data in test set
 testdata.imputed = mice(testdata %>% 
               select(-readmitted) %>% 
-              mutate_if(is.character, as.factor), m=5, maxit = 20) 
+              mutate_if(is.character, as.factor), m=1, maxit=2, nnet.MaxNWts=10000)
 #just use the first imputed set for convenience
 test.imputed = complete(testdata.imputed) %>% as_tibble()
-testdata.imputed = data.frame(result = testdata.imputed$readmitted%>%as.factor())%>%
+testdata.imputed = data.frame(result = testdata$readmitted%>%as.factor())%>%
                     bind_cols(test.imputed) %>% as_tibble()
+```
+
+```{r}
+# logistic regression
+lr = glm(result==TRUE ~ ., data = traindata.imputed, family = binomial("logit"))
+
+lr %>% summary() %>% coef() %>% exp()-1
+
+traindata.imputed=traindata.imputed%>%select(-acetohexamide)
+
 ```
