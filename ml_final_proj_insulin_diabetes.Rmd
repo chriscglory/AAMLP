@@ -27,7 +27,6 @@ setwd("C:/Users/wuyue/Desktop/CMU/ML-Pipeline/Final")
 fileDirectory = "C:/Users/wuyue/Desktop/CMU/ML-Pipeline/Final/dataset_diabetes"
 
 diabetic_data = read.csv(paste0(fileDirectory,"/diabetic_data.csv",sep=""),na.strings = c("?","Unknown/Invalid"))
-IDs_mapping_data=read.csv(paste0(fileDirectory,"/IDs_mapping.csv",sep="")) 
 ```
 
 ```{r,cache=TRUE}
@@ -35,25 +34,33 @@ IDs_mapping_data=read.csv(paste0(fileDirectory,"/IDs_mapping.csv",sep=""))
 aggr(diabetic_data, col = c('grey28','darkorange2'), numbers=TRUE, sortVars=TRUE, 
                   labels=names(diabetic_data), cex.axis=0.7, gap=3, 
                   ylab=c("Histogram of missing data", "Pattern"))
-#exclude variables with too much missing data(>=40%) and irrelavent variables
-diabetic_data=diabetic_data%>%select(-weight,-medical_specialty,-payer_code,-encounter_id,-patient_nbr,-admission_source_id)
+#exclude variables with too much missing data(>=40%), irrelavent variables and unreasonable indicators
+diabetic_data=diabetic_data%>%select(-weight,-medical_specialty,-payer_code,-encounter_id,-patient_nbr,-admission_source_id, -change)
 #remove entry with missing diagnosis and gender
-diabetic_data=diabetic_data[-which(is.na(diabetic_data$diag_1)),]
-diabetic_data=diabetic_data[-which(is.na(diabetic_data$diag_2)),]
-diabetic_data=diabetic_data[-which(is.na(diabetic_data$diag_3)),]
+diabetic_data=diabetic_data[-which(is.na(diabetic_data$diag)),]
 diabetic_data=diabetic_data[-which(is.na(diabetic_data$gender)),]
 
 #transform outcomes flag
 diabetic_data$readmitted=ifelse(diabetic_data$readmitted=="<30",TRUE,FALSE)
 
+#transform categorical variables
+diabetic_data=diabetic_data %>% mutate(admission_type_id=admission_type_id %>% as.factor()) %>% mutate(discharge_disposition_id=discharge_disposition_id %>% as.factor())
+  
 #summary statistics
 summary(diabetic_data)
 
 #remove imbalance variables(only have almost one value)
-diabetic_data=diabetic_data %>% select(-examide, -citoglipton,-acetohexamide,-troglitazone,-tolazamide,-glimepiride.pioglitazone, -metformin.rosiglitazone,-metformin.pioglitazone)
+diabetic_data=diabetic_data %>% select(-examide, -citoglipton,-acetohexamide,-troglitazone,-tolazamide,-glimepiride.pioglitazone, -metformin.rosiglitazone,-metformin.pioglitazone，-chlorpropamide,-tolbutamide,-miglitol,-glyburide.metformin,-glipizide.metformin,-acarbose)
 
 #summary statistics of final data
 summary(diabetic_data)
+
+#filter infrequent diagnosis
+diag_count=diabetic_data %>% dplyr::group_by(diag) %>% dplyr::summarise(count=n()) %>% as.data.frame()
+diag_count_top=diag_count[which(diag_count$count>50),]
+diabetic_data=diabetic_data %>% filter(diag %in% diag_count_top$diag)
+diabetic_data$diag=droplevels(diabetic_data$diag)
+
 
 #split into test/train data by 3:7
 diabetic_data=diabetic_data[sample(1:nrow(diabetic_data)),]
@@ -63,7 +70,7 @@ testdata = diabetic_data[-(1:floor(nrow(diabetic_data)*0.7)),]
 #impute missing data in train set
 traindata.imputed = mice(traindata %>% 
               select(-readmitted) %>% 
-              mutate_if(is.character, as.factor), m=1, maxit=1,  nnet.MaxNWts = 10000) 
+              mutate_if(is.character, as.factor), m=1, maxit=5,  nnet.MaxNWts = 10000) 
 #just use the first imputed set as the dataset is too large
 train.imputed = complete(traindata.imputed) %>% as_tibble()
 traindata.imputed = data.frame(result = traindata$readmitted%>%as.factor())%>%
@@ -72,7 +79,7 @@ traindata.imputed = data.frame(result = traindata$readmitted%>%as.factor())%>%
 #impute missing data in test set
 testdata.imputed = mice(testdata %>% 
               select(-readmitted) %>% 
-              mutate_if(is.character, as.factor), m=1, maxit=2, nnet.MaxNWts=10000)
+              mutate_if(is.character, as.factor), m=1, maxit=5, nnet.MaxNWts=10000)
 #just use the first imputed set for convenience
 test.imputed = complete(testdata.imputed) %>% as_tibble()
 testdata.imputed = data.frame(result = testdata$readmitted%>%as.factor())%>%
@@ -83,8 +90,18 @@ testdata.imputed = data.frame(result = testdata$readmitted%>%as.factor())%>%
 # logistic regression
 lr = glm(result==TRUE ~ ., data = traindata.imputed, family = binomial("logit"))
 
-lr %>% summary() %>% coef() %>% exp()-1
+#draw ROC graph
+lr.predict = lr %>% predict(testdata.imputed, type="response")
+lr.rocdata=data.frame(pred = lr.predict, truth=testdata.imputed$result)
+lr.roc <- roc(lr.rocdata$truth,lr.rocdata$pred)
+plot(lr.roc, col="red")
+legend("topright",legend=round(lr.roc$auc,4),pch=20, pt.cex=2)
 
-traindata.imputed=traindata.imputed%>%select(-acetohexamide)
+#calculate significance level and coefficient
+lr.summary=lr %>% summary() %>% coef() 
+lr.summary["insulinSteady","Pr(>|z|)"]
+lr.summary["insulinUp","Pr(>|z|)"]
+lr.summary["insulinNo","Pr(>|z|)"]
+lr.summary["insulinSteady","Estimate"] %>% exp()-1
 
 ```
