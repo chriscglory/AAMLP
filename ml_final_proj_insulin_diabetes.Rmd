@@ -61,6 +61,19 @@ diag_count_top=diag_count[which(diag_count$count>50),]
 diabetic_data=diabetic_data %>% filter(diag %in% diag_count_top$diag)
 diabetic_data$diag=droplevels(diabetic_data$diag)
 
+# It is code for observing relationships between each two variables
+# panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+# {
+#     usr <- par("usr"); on.exit(par(usr))
+#     par(usr = c(0, 1, 0, 1))
+#     r <- abs(cor(x, y))
+#     txt <- format(c(r, 0.123456789), digits = digits)[1]
+#     txt <- paste0(prefix, txt)
+#     if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+#     text(0.5, 0.5, txt, cex = pmax(1, cex.cor * r))
+# }
+# 
+# pairs(cleanData[names], lower.panel = panel.cor)
 
 #split into test/train data by 3:7
 diabetic_data=diabetic_data[sample(1:nrow(diabetic_data)),]
