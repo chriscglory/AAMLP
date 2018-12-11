@@ -15,7 +15,7 @@ loadlibs = function(libs) {
   }
 }
 libs = c("tidyr","magrittr","purrr","dplyr","stringr","readr","data.table",
-         "keras","ggplot2","imager","pROC","VIM","mice")
+         "keras","ggplot2","imager","pROC","VIM","mice","RWeka","caret")
 loadlibs(libs)
 options(warn = -1)
 ```
@@ -61,7 +61,7 @@ diag_count_top=diag_count[which(diag_count$count>50),]
 diabetic_data=diabetic_data %>% filter(diag %in% diag_count_top$diag)
 diabetic_data$diag=droplevels(diabetic_data$diag)
 
-# It is code for observing relationships between each two variables
+#It is code for observing relationships between each two variables
 # panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 # {
 #     usr <- par("usr"); on.exit(par(usr))
@@ -73,7 +73,7 @@ diabetic_data$diag=droplevels(diabetic_data$diag)
 #     text(0.5, 0.5, txt, cex = pmax(1, cex.cor * r))
 # }
 # 
-# pairs(cleanData[names], lower.panel = panel.cor)
+# pairs(diabetic_data, lower.panel = panel.cor)
 
 #split into test/train data by 3:7
 diabetic_data=diabetic_data[sample(1:nrow(diabetic_data)),]
@@ -101,14 +101,20 @@ testdata.imputed = data.frame(result = testdata$readmitted%>%as.factor())%>%
 
 ```{r}
 # logistic regression
-lr = glm(result==TRUE ~ ., data = traindata.imputed, family = binomial("logit"))
+lr.all = glm(result==TRUE ~ ., data = traindata.imputed, family = binomial("logit"))
+lr.no.insulin = glm(result==TRUE ~ ., data = traindata.imputed %>% select(-insulin), family = binomial("logit"))
 
 #draw ROC graph
-lr.predict = lr %>% predict(testdata.imputed, type="response")
-lr.rocdata=data.frame(pred = lr.predict, truth=testdata.imputed$result)
-lr.roc <- roc(lr.rocdata$truth,lr.rocdata$pred)
-plot(lr.roc, col="red")
-legend("topright",legend=round(lr.roc$auc,4),pch=20, pt.cex=2)
+lr.all.predict = lr.all %>% predict(testdata.imputed, type="response")
+lr.all.rocdata=data.frame(pred = lr.all.predict, truth=testdata.imputed$result)
+lr.no.insulin.predict = lr.no.insulin %>% predict(testdata.imputed%>% select(-insulin), type="response")
+lr.no.insulin.rocdata=data.frame(pred = lr.no.insulin.predict, truth=testdata.imputed$result)
+lr.all.roc <- roc(lr.all.rocdata$truth,lr.all.rocdata$pred)
+plot(lr.all.roc, col="red")
+par(new=TRUE)
+lr.no.insulin.roc <- roc(lr.no.insulin.rocdata$truth,lr.no.insulin.rocdata$pred)
+plot(lr.no.insulin.roc, col="blue")
+legend("topright",legend=c(paste0("LR_All","(",round(lr.all.roc$auc,4),")"),                           paste0("LR_no_Insulin","(",round(lr.no.insulin.roc$auc,4),")")),pch=20, pt.cex=2)
 
 #calculate significance level and coefficient
 lr.summary=lr %>% summary() %>% coef() 
