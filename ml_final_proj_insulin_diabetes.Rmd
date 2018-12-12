@@ -15,7 +15,7 @@ loadlibs = function(libs) {
   }
 }
 libs = c("tidyr","magrittr","purrr","dplyr","stringr","readr","data.table",
-         "keras","ggplot2","imager","pROC","VIM","mice","RWeka","caret")
+         "keras","ggplot2","imager","pROC","VIM","mice","partykit","caret","rpart","rpart.plot")
 loadlibs(libs)
 options(warn = -1)
 ```
@@ -35,13 +35,18 @@ aggr(diabetic_data, col = c('grey28','darkorange2'), numbers=TRUE, sortVars=TRUE
                   labels=names(diabetic_data), cex.axis=0.7, gap=3, 
                   ylab=c("Histogram of missing data", "Pattern"))
 #exclude variables with too much missing data(>=40%), irrelavent variables and unreasonable indicators
-diabetic_data=diabetic_data%>%select(-weight,-medical_specialty,-payer_code,-encounter_id,-patient_nbr,-admission_source_id, -change)
+diabetic_data=diabetic_data%>%select(-weight,-medical_specialty,-payer_code,-encounter_id,-patient_nbr,-change)
 #remove entry with missing diagnosis and gender
 diabetic_data=diabetic_data[-which(is.na(diabetic_data$diag)),]
 diabetic_data=diabetic_data[-which(is.na(diabetic_data$gender)),]
 
 #transform outcomes flag
 diabetic_data$readmitted=ifelse(diabetic_data$readmitted=="<30",TRUE,FALSE)
+
+#transform treatment variable
+diabetic_data=diabetic_data %>% filter(insulin!="No")
+diabetic_data$insulin=ifelse(diabetic_data$insulin=="Steady","Steady","Change") %>% as.factor()
+diabetic_data$insulin=droplevels(diabetic_data$insulin)
 
 #transform categorical variables
 diabetic_data=diabetic_data %>% mutate(admission_type_id=admission_type_id %>% as.factor()) %>% mutate(discharge_disposition_id=discharge_disposition_id %>% as.factor())
@@ -50,30 +55,31 @@ diabetic_data=diabetic_data %>% mutate(admission_type_id=admission_type_id %>% a
 summary(diabetic_data)
 
 #remove imbalance variables(only have almost one value)
-diabetic_data=diabetic_data %>% select(-examide, -citoglipton,-acetohexamide,-troglitazone,-tolazamide,-glimepiride.pioglitazone, -metformin.rosiglitazone,-metformin.pioglitazone，-chlorpropamide,-tolbutamide,-miglitol,-glyburide.metformin,-glipizide.metformin,-acarbose)
+diabetic_data=diabetic_data %>% select(-examide, -citoglipton,-acetohexamide,-troglitazone,-tolazamide,-glimepiride.pioglitazone, -metformin.rosiglitazone,-metformin.pioglitazone，-chlorpropamide,-tolbutamide,-miglitol,-glyburide.metformin,-glipizide.metformin,-acarbose,-diabetesMed,-nateglinide)
 
 #summary statistics of final data
 summary(diabetic_data)
 
 #filter infrequent diagnosis
+diabetic_data=diabetic_data %>% select(-diag)
 diag_count=diabetic_data %>% dplyr::group_by(diag) %>% dplyr::summarise(count=n()) %>% as.data.frame()
 diag_count_top=diag_count[which(diag_count$count>50),]
 diabetic_data=diabetic_data %>% filter(diag %in% diag_count_top$diag)
 diabetic_data$diag=droplevels(diabetic_data$diag)
 
 #It is code for observing relationships between each two variables
-# panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
-# {
-#     usr <- par("usr"); on.exit(par(usr))
-#     par(usr = c(0, 1, 0, 1))
-#     r <- abs(cor(x, y))
-#     txt <- format(c(r, 0.123456789), digits = digits)[1]
-#     txt <- paste0(prefix, txt)
-#     if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
-#     text(0.5, 0.5, txt, cex = pmax(1, cex.cor * r))
-# }
-# 
-# pairs(diabetic_data, lower.panel = panel.cor)
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- abs(cor(x, y))
+    txt <- format(c(r, 0.123456789), digits = digits)[1]
+    txt <- paste0(prefix, txt)
+    if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt, cex = pmax(1, cex.cor * r))
+}
+
+pairs(diabetic_data, lower.panel = panel.cor)
 
 #split into test/train data by 3:7
 diabetic_data=diabetic_data[sample(1:nrow(diabetic_data)),]
@@ -95,32 +101,42 @@ testdata.imputed = mice(testdata %>%
               mutate_if(is.character, as.factor), m=1, maxit=5, nnet.MaxNWts=10000)
 #just use the first imputed set for convenience
 test.imputed = complete(testdata.imputed) %>% as_tibble()
-testdata.imputed = data.frame(result = testdata$readmitted%>%as.factor())%>%
+testdata.imputed = data.frame(result = testdata$readmitted %>% as.factor())%>%
                     bind_cols(test.imputed) %>% as_tibble()
 ```
 
 ```{r}
 # logistic regression
-lr.all = glm(result==TRUE ~ ., data = traindata.imputed, family = binomial("logit"))
-lr.no.insulin = glm(result==TRUE ~ ., data = traindata.imputed %>% select(-insulin), family = binomial("logit"))
+lr = glm(result==TRUE ~ ., data = traindata.imputed, family = binomial("logit"))
 
 #draw ROC graph
-lr.all.predict = lr.all %>% predict(testdata.imputed, type="response")
-lr.all.rocdata=data.frame(pred = lr.all.predict, truth=testdata.imputed$result)
+lr.predict = lr %>% predict(testdata.imputed, type="response")
+lr.rocdata=data.frame(pred = lr.predict, truth=testdata.imputed$result)
 lr.no.insulin.predict = lr.no.insulin %>% predict(testdata.imputed%>% select(-insulin), type="response")
 lr.no.insulin.rocdata=data.frame(pred = lr.no.insulin.predict, truth=testdata.imputed$result)
-lr.all.roc <- roc(lr.all.rocdata$truth,lr.all.rocdata$pred)
-plot(lr.all.roc, col="red")
-par(new=TRUE)
-lr.no.insulin.roc <- roc(lr.no.insulin.rocdata$truth,lr.no.insulin.rocdata$pred)
-plot(lr.no.insulin.roc, col="blue")
-legend("topright",legend=c(paste0("LR_All","(",round(lr.all.roc$auc,4),")"),                           paste0("LR_no_Insulin","(",round(lr.no.insulin.roc$auc,4),")")),pch=20, pt.cex=2)
+lr.roc <- roc(lr.rocdata$truth,lr.rocdata$pred)
+plot(lr.roc, col="red")
+
 
 #calculate significance level and coefficient
 lr.summary=lr %>% summary() %>% coef() 
-lr.summary["insulinSteady","Pr(>|z|)"]
-lr.summary["insulinUp","Pr(>|z|)"]
-lr.summary["insulinNo","Pr(>|z|)"]
+lr.summary["insulinSteady",]
 lr.summary["insulinSteady","Estimate"] %>% exp()-1
 
-```
+# pruned decision tree
+dt.full = rpart(result ~ ., 
+           data = traindata.imputed, control=rpart.control(xval=10, minsplit=10, cp=0.0001))
+min.cv.idx <- which.min(lfv.full$cptable[,"xerror"])
+# min CV error + 1se (this is the height of the horizontal bar)
+min.cv.err.1se <- lfv.full$cptable[min.cv.idx,"xerror"] +
+                    lfv.full$cptable[min.cv.idx,"xstd"]
+# Which cp values produce models whose error is below min CV + 1se?
+candidate.cp.vals <- lfv.full$cptable[which(lfv.full$cptable[,"xerror"] < min.cv.err.1se),"CP"]
+# 1-SE rule value of cp
+cp.1se <- max(candidate.cp.vals)
+
+dt.pruned <- prune(dt.full, cp = cp.1se)
+
+dt.pruned.party <- as.party(dt.pruned)
+plot(dt.pruned.party, gp = gpar(fontsize = 5))
+
