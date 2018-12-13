@@ -123,10 +123,10 @@ conf.matrix = confusionMatrix(lr.predict,
 print(conf.matrix$table)
 
 #calculate evaluation index
-accuracy <- conf.matrix$overall["Accuracy"] %>% cat()
-sensitivity <- conf.matrix$byClass["Sensitivity"] %>% cat()
-specificity<- conf.matrix$byClass["Specificity"] %>% cat()
-precision<- conf.matrix$byClass["Pos Pred Value"] %>% cat()
-recall<- conf.matrix$byClass["Sensitivity"] %>% cat()
+accuracy <- conf.matrix$overall["Accuracy"]
+sensitivity <- conf.matrix$byClass["Sensitivity"] 
+specificity<- conf.matrix$byClass["Specificity"] 
+precision<- conf.matrix$byClass["Pos Pred Value"] 
+recall<- conf.matrix$byClass["Sensitivity"] 
 
 F1_Score(testdata.imputed$result, lr.predict, positive = "TRUE")
