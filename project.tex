@@ -1,0 +1,208 @@
+\documentclass[twoside,11pt]{article}
+
+% Any additional packages needed should be included after jmlr2e.
+% Note that jmlr2e.sty includes epsfig, amssymb, natbib and graphicx,
+% and defines many common macros, such as 'proof' and 'example'.
+%
+% It also sets the bibliographystyle to plainnat; for more information on
+% natbib citation styles, see the natbib documentation, a copy of which
+% is archived at http://www.jmlr.org/format/natbib.pdf
+
+\usepackage{jmlr2e}
+%\usepackage{parskip}
+
+% Definitions of handy macros can go here
+\newcommand{\dataset}{{\cal D}}
+\newcommand{\fracpartial}[2]{\frac{\partial #1}{\partial  #2}}
+% Heading arguments are {volume}{year}{pages}{submitted}{published}{author-full-names}
+
+% Short headings should be running head and authors last names
+\ShortHeadings{95-845: AAMLP The Relationship Between Change of Dosage of Insulin and Early Readmission Rates}{Wu and Chen}
+\firstpageno{1}
+
+\begin{document}
+
+\title{Heinz 95-845: The Relationship Between Change of Dosage of Insulin and Early Readmission Rates  \\ Applied Analytics: the Machine Learning Pipeline}
+
+\author{\name Yue Wu \email yuew5@andrew.cmu.edu \\
+       \addr Heinz College\\
+       Carnegie Mellon University\\
+       Pittsburgh, PA, United States \\
+       \AND
+       \name  Cheng Chen \email chengc3@andrew.cmu.edu \\
+       \addr Engineering \& Technology Innovation Management\\
+       Carnegie Mellon University\\
+       Pittsburgh, PA, United States}
+
+\maketitle
+
+\begin{abstract}
+
+In terms of morbidity and mortality, hyperglycemia management plays an important impact on outcomes in hospitalized patients. However, only few national diabetes care assessments can be used as baselines for change during hospitalization. This analysis of large clinical databases patients (corresponding to 74 million unique encounters of 17 million unique patients) is used to guide future directions by detecting attributes that may lead to improve patient safety. Nearly 70,000 hospitalized diabetic patients were identified, with sufficient detail for analysis. Multivariate logistic regression was used to fit the relationship between the change of dosage of insulin and early readmissions while controlling covariates such as demographics, severity, other types of medication, and type of admission. The statistical model indicates that the relationship between the probability of early readmission depends on the steadiness of insulin dosage.
+\end{abstract}
+
+
+
+\section{Introduction}
+Diabetes usually comes with a lot of other complications, including hypertension, hyperlipidemia, cardiovascular disease, kidney disease and even cancers. For the diabetes patients, readmission is one of the few things that they want to avoid during the treatment process. By analyzing the factors which may affect the rate of readmission, it will increase the effectiveness and safety to the diabetes patients as well reduce the amount of further work of physicians.  
+
+Previous works have proven some important practices can reduce 30-day readmission rates for diabetes patients. For instance, Beata Strack and Jonathan P. DeShazo et al.(2014) address the decision to test for HbA1c, rather than the values of the HbA1c result could affect the readmission possibility in the study of Impact of HbA1c Measurement on Hospital Readmission Rates: Analysis of 70,000 Clinical Database Patient[1]. Daniel J.Rubin et al.(2014) suggest that several interventions may reduce the risk of early readmission for patients with diabetes, including inpatient diabetes education, improving communication of discharge instructions, and involving patients more in medication reconciliation and post-discharge planning in the study of Early readmission among patients with diabetes: A qualitative assessment of contributing factors[2].
+Our study will study the impact of the change in dosage of insulin on the probability of readmission, which could extend the research on exploring best practices to reduce the readmission rates for diabetes patients. 
+
+
+\section{Background} \label{background}
+Most regression models are described in terms of the way the outcome variable is modeled: in linear regression the outcome is continuous, logistic regression has a dichotomous outcome, and survival analysis involves a time to event outcome. Statistically speaking, multivariate analysis refers to statistical models that have 2 or more dependent or outcome variables, and multivariable analysis refers to statistical models in which there are multiple independent or response variables[3].
+
+Multivariable logistic regression was initially developed as a methodology to invest the pathogenesis in medicine and epidemiology, and it is often used for analyzing risk factors for certain type of disease[4].
+
+In our case, multivariable logistic regression was used to fit the relationship between the change of dosage of insulin and early readmission while controlling for covariates such as demographics, severity and other types of medications, and type of admission. 
+
+
+\section{Method: Logistic Regression} \label{model}
+Machine learning techniques analyze large data sets to look for descriptive patterns, use acquired data to give solid suggestion in all sorts of domains or predict the probability of outcome happening. Recently, the awareness of importance of data analysis has been noticed and a lot of effort has been made to a store a large set of data. And due to those data people have collected, statistical method especially machine learning method are becoming more important and more feasible. There has been an impressive amounts of successful applications used machine learning pipeline: applications that learn from data are used to separate junk emails for the email box, recognize the gender, race, emotions from large data sets, diagnosis based on medical image, extract information from paragraph of an article, or classify the images to certain categories. 
+
+The machine learning task could separate to many subcategories including supervised learning(given training set of instances of unknown target function and predict the outcome best approximates target function), unsupervised(given a set of instances, without the labeled outcome to discover interesting regularities that characterize the instances), semi-supervised, active learning, and reinforcement learning. With a data set providing the interested attribute, supervised learning is the primary machine learning technique to analyze the relationship and predict the observable variables. Often, the supervised learning can be have two goal functions:classification problem and prediction problem. Classification problem is the action or process of classifying something according to shared qualities or characteristics given some observations about a specific object. On the other hand, regression problem estimates the relationships among variables and the outcome. 
+
+A patient could be readmitted based on his/her previous medical record and the treatment process as well as other factors including ethnicity, hospitalized days and so on. Regression could state whether this patient would readmit or not, as well as what are the most important features he/she needs to be aware in order not to readmit. By using logistic regression model , we can answer both questions and could achieve an comprehensive insight about the diabetes readmission rate.
+
+By using the logistic regression on multivariable, we are able to examine the relationship between the change of dosage of insulin and early readmission rate by controlling other covariates. P-value(a number between 0-1) of each attribute indicates the significance level.
+
+
+\section{Experimental Setup} \label{experiment}
+The data set represents the data of clinical care for 10 years from 1999 to 2008 at 130 hospital in the United States and integrated delivery network. The data set includes more that 50 features representing the patient and hospital outcomes. The total number of the instances is 100,000 and the number of the attributes exceeds 50. The features of the data set could be concluded by the following criteria [5]: 
+
+(1)	It is an inpatient encounter (a hospital admission).
+
+(2)	It is a diabetic encounter, that is, one during which any kind of diabetes was entered to the system as a diagnosis.
+
+(3)	The length of stay was at least 1 day and at most 14 days.
+
+(4)	Laboratory tests were performed during the encounter.
+
+(5)	Medications were administered during the encounter.
+
+\vspace{0.5em}
+
+The main attributes of the data sets are \emph{patient number, race, gender, age, admission type, time in hospital, medical specialty of admitting physician, number of lab test performed, HbA1c test result, diagnosis, number of medication, diabetic medications, number of outpatient, inpatient, and emergency visits in the year before the hospitalization, etc.}
+
+\begin{figure}[htbp]
+  \centering 
+  \includegraphics[width=5.5in]{missing.png} 
+  \caption{Missing attributes summary.}
+  \label{fig:example} 
+\end{figure} 
+
+
+\subsection{Data Split} 
+In order to conduct a comprehensive data analysis and machine learning pipeline, our data set needs to be split to train set and test set. By randomly setting the 70\% of the data for train data and 30\% to be test data, we can test the efficiency and accuracy of the model. 
+
+\subsection{Data Pre-processing} 
+The row data contains the missing data in various attributes, including patient weight, payer code, medical physician's specialty and diagnosis etc. In order to make a comprehensive and convincing data analysis using this data set, a pre-processing process including selecting important variables and data imputation should be conducted.
+
+The data has missing attributes of \emph{Weight, Payer code, Medical specialty and Race}. The weight attribute has missing data more than 97\%, which we think could not be used to analyze the model. Both payer code and medical specialty (in which area are the physicians specialized at) have more than 50\% missing data. Hence, those three attributes are excluded to our model since the imputation of those attributes which has over 50\% missing data would be hard as well as less convincing.    
+
+For the other attributes' missing data, it is reasonable to believe the missingness of data are MCAR (Missing Completely At Random) or MAR (Missing At Random), so we chose to use multiple imputation strategy to impute the missing data. By using the technique of MICE (Multivariate Imputation by Chained Equations), those missing data could be imputed. The MICE package creates multiple imputations (replacement of values) for multivariate missing data. We set the number of multiple imputation to 5 and max iteration to 10. Pooling the result when evaluating performance was required, however, this process was skipped because we had a large scale of encounters. We only used the first imputed set as the completed data set.  
+
+
+
+
+
+
+\subsection{Feature Choices} 
+Since the primary purpose of the analysis is to see whether a patient needs early readmission or not, we define the outcome as having two possible values: one is for the patient was readmitted within 30 days of discharge, another is for no readmission within 30 days[6]. So we converted the readmission column of the raw data(NO, \textless30, \textgreater30) to a binary outcome (YES/NO). For features like \textit{examide, citoglipton, acetohexamide, troglitazone, tolazamide, glimepiride-pioglitazone,  metformin-rosiglitazone, metformin-pioglitazone, chlorpropamide, tolbutamide, miglitol, glyburide-metformin, glipizide-metformin, acarbose}, almost all data are labeled as \emph{NO}. We can consider them as constant variables, so we deleted those columns as well as we deleted the weight, payer code and medical specialty as we described on the section.  
+
+Also, for those attributes that have no meaningful insight to the prediction itself, such as \textit{encounter id, patient number,admission, and change}, we also excluded those features for not interfering the result of analysis. For the diagnosis attribute, all the patients are having diabetes, too particular diagnosis is not necessary in our objective. Hence, we deleted the diagnosis attribute as well.  
+
+\begin{figure}[htbp!]
+  \centering 
+  \includegraphics[width=6.5in]{summary_new.png} 
+  \caption{Data set summary.}
+  \label{fig:example} 
+\end{figure} 
+
+\subsection{Evaluation Criteria}
+30 \% of the data sets are being utilized as test data to evaluate the accuracy of the model. By training 70,000 patient's information and test the outcome of readmission rate of the rest 30,000 patients, we believe the model could be general. By drawing the ROC curve, calculating the value of AUC and generating confusion matrix, we are able to evaluate the performance of the model. P-value is used to test the significance of the variables as well.  
+
+\section{Results} \label{results}
+
+
+\subsection{Results on change of dosage of insulin variable} 
+
+By modeling the logistic regression, the significance of each attributes could be calculated. The P value for the variable \emph{insulinSteady} is 0.007, which means the steadiness of insulin dosage is statistically significant at an alpha level of 0.01. Controlling other covariantes, steadiness of insulin dosage is associated with a 8.86\% decrese in odds of early readmission from the calculation of estimated coefficient.   
+
+\subsection{Results on Performance of the Model}
+
+The ROC curve of the model is displayed at Figure 3 and we can see the AUC is 0.6651. That is to say, we have a probability of 66\% to detect if a patient needs to readmit based on his/her previous treatment and medical record. Through confusion matrix, we calculated accuracy(0.8642354) and sensitivity(0.06830467).
+
+
+
+
+\begin{figure}[htbp]
+  \centering 
+  \includegraphics[width=4.0in]{poc.png} 
+  \caption{ROC curve of the model and AUC value.}
+  \label{fig:example} 
+\end{figure} 
+ 
+\begin{table}[htbp]
+  \centering 
+  \begin{tabular}{lclc} 
+    Prediction/Reference  & FALSE & TRUE  \\ 
+    \hline \\[-11pt]
+    FALSE & 13960 & 1896\\ 
+    TRUE & 320 & 139\\ \hline 
+  \end{tabular}
+  \label{tab:example} 
+    \caption{Confusion Matrix} 
+\end{table}
+
+\section{Discussion} 
+The model provided the accuracy of 86.4 \% and AUC of 0.6651. Out of all 25 attributes which were utilized in the logistic regression, insulin showed a significant impact on the early readmission. However, since the data set has eight times more of patients who do not readmit within 30 month than those who readmit, we only got an relatively low sensitivity to the true prediction. 
+
+
+\section{Conclusion} 
+By given the logistic regression of the medical data from over 70,000 diabetes patients, the relationship between the steadiness of insulin dosage and early readmission rate was discovered. The steadiness of insulin dosage (patient didn't change the dosage of insulin during the treatment) can actually decrease the odd to be readmitted. The model shows a 0.6651 AUC value due to the imbalance of number of early readmitted patients with non-early readmitted patients. Using the model we developed, we can give a IIa class recommendation for physicians that keeping the dosage of insulin at the same level during the treatment could avoid less readmission for patients. Relatively high accuracy and AUC indicate that our model is almost capable to predict whether a patient will need an early readmission or not. 
+
+% ACKNOWLEDGEMENTS
+% \acks{Many thanks to all collaborators and funders!}
+
+\bibliography{sample}  % Should contain at least 10 cited references
+
+
+
+[1] Beata Strack, Jonathan P. DeShazo and Chris Gennings et al. Impact of HbA1c Measurement on Hospital Readmission Rates: Analysis of 70,000 Clinical Database Patient Records" In \emph{BioMed Research International}, 2014.
+
+[2] Daniel J.Rubin and KellyDonnell-Jackson et al. Early readmission among patients with diabetes: A qualitative assessment of contributing factors. In \emph{Journal of Diabetes and its Complications}, 2014.
+
+[3] Hidalgo, Bertha, and Melody Goodman. "Multivariate or multivariable regression?." American journal of public health 103.1 (2013): 39-40.
+
+[4] McDonald, J. H. (2009). Handbook of biological statistics (Vol. 2, pp. 173-181). Baltimore, MD: sparky house publishing.
+
+[5] Strack, B., DeShazo, J. P., Gennings, C., Olmo, J. L., Ventura, S., Cios, K. J., & Clore, J. N. (2014). Impact of HbA1c measurement on hospital readmission rates: analysis of 70,000 clinical database patient records. BioMed research international, 2014.
+
+[6] Nathan, David M., and DCCT/Edic Research Group. The diabetes control and complications trial/epidemiology of diabetes interventions and complications study at 30 years: overview. In \emph{diabetes care 37.1: 9-16}, 2014.
+
+\newpage
+\appendix
+\section*{Appendix.}
+
+\begin{figure}[htbp!]
+  \centering 
+  \includegraphics[width=7.0in]{sign1.png} 
+  \label{fig:example} 
+\end{figure} 
+
+\begin{figure}[htbp]
+  \centering 
+  \includegraphics[width=7.0in]{sign2.png} 
+  \caption{Logistic Regression summary.}
+  \label{fig:example} 
+\end{figure} 
+
+\end{document}
+
+
+
+
+
+
